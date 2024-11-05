@@ -1,0 +1,11 @@
+[flyway]
+
+[environments.local]
+url = "jdbc:sqlserver://localhost:1433;databaseName=StackOverflow;encrypt=true;trustServerCertificate=true"
+user = "sa"
+password = "Password123!"
+
+[environments.ci]
+url = "jdbc:sqlserver://localhost:1433;databaseName=StackOverflow;encrypt=true;trustServerCertificate=true"
+user = "sa"
+password = "Password123!"
