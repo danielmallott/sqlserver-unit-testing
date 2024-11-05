@@ -8,5 +8,5 @@ BEGIN
         @ExpectedState = 1;
 
     -- Act
-    EXEC dbo.IncrementReputation -1, 10;
+    EXEC dbo.IncrementReputation NULL, 10;
 END;
