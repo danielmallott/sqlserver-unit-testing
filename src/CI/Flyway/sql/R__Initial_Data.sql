@@ -1,3 +1,5 @@
+SET IDENTITY_INSERT dbo.LinkTypes ON;
+
 WITH linkTypes AS (
     SELECT 1 AS Id, 'Linked' AS [Type]
     UNION ALL
@@ -11,6 +13,9 @@ WHEN NOT MATCHED BY target THEN
     VALUES (source.Id, source.[Type])
 WHEN NOT MATCHED BY source THEN
     DELETE;
+
+SET IDENTITY_INSERT dbo.LinkTypes OFF;
+SET IDENTITY_INSERT dbo.PostTypes ON;
 
 WITH postTypes AS (
     SELECT 1 AS Id, 'Question' AS [Type] UNION ALL
@@ -30,6 +35,9 @@ WHEN NOT MATCHED BY target THEN
     VALUES (source.Id, source.[Type])
 WHEN NOT MATCHED BY source THEN
     DELETE;
+
+SET IDENTITY_INSERT dbo.PostTypes OFF;
+SET IDENTITY_INSERT dbo.VoteTypes ON;
 
 WITH voteTypes AS (
     SELECT 1 AS Id, 'AcceptedByOriginator' AS [Name] UNION ALL
@@ -56,3 +64,5 @@ WHEN NOT MATCHED BY target THEN
     VALUES (source.Id, source.[Name])
 WHEN NOT MATCHED BY source THEN
     DELETE;
+
+SET IDENTITY_INSERT dbo.VoteTypes OFF;
