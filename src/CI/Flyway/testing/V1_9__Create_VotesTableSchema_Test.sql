@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [StackOverflow.SchemaValidationTests].[Validate Votes Table Schema]
+CREATE OR ALTER PROCEDURE [StackOverflow.SchemaValidationTests].[Test Votes Table Schema]
 AS
 BEGIN
     -- Arrange

@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [StackOverflow.SchemaValidationTests].[Validate LinkTypes Table Schema]
+CREATE OR ALTER PROCEDURE [StackOverflow.SchemaValidationTests].[Test LinkTypes Table Schema]
 AS
 BEGIN
     -- Arrange

@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [StackOverflow.SchemaValidationTests].[Validate Comments Table Schema]
+CREATE OR ALTER PROCEDURE [StackOverflow.SchemaValidationTests].[Test Comments Table Schema]
 AS
 BEGIN
     -- Arrange
