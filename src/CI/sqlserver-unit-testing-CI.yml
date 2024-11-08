@@ -1,0 +1,101 @@
+resources:
+  repositories:
+  - repository: self
+    type: git
+    ref: refs/heads/main
+jobs:
+- job: Job_1
+  displayName: Deploy and Run Unit Tests
+  pool:
+    vmImage: ubuntu-latest
+  steps:
+  - checkout: self
+    clean: true
+    fetchTags: false
+  - task: DockerInstaller@0
+    displayName: Install Docker CLI
+  - task: PowerShell@2
+    displayName: Install Sqlcmd PowerShell Module
+    inputs:
+      targetType: inline
+      script: >
+        Install-Module -Name SqlServer -Scope CurrentUser -Force
+      pwsh: true
+  - task: CmdLine@2
+    displayName: Install Flyway
+    inputs:
+      script: >
+        wget -qO- https://download.red-gate.com/maven/release/com/redgate/flyway/flyway-commandline/10.20.1/flyway-commandline-10.20.1-linux-x64.tar.gz | tar -xvz && sudo ln -s `pwd`/flyway-10.20.1/flyway /usr/local/bin
+  - task: CmdLine@2
+    displayName: Start Docker Container
+    inputs:
+      script: docker run --name sqlserver --hostname sqlserver -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=Password123" -p 1433:1433 -d mcr.microsoft.com/mssql/server:2022-latest
+  - task: PowerShell@2
+    displayName: Create Database
+    inputs:
+      targetType: inline
+      script: >-
+        Start-Sleep -Seconds 30
+
+        $results = Invoke-Sqlcmd -ServerInstance "localhost" -Database "master" -Username "sa"  -Password "Password123"  -Query "CREATE DATABASE [StackOverflow]" -ConnectionTimeout 120 -TrustServerCertificate
+
+        Write-Host "Test results:"
+
+        Write-Host "$results[0]"
+      pwsh: true
+  - task: PowerShell@2
+    displayName: Install tSQLt
+    inputs:
+      targetType: inline
+      script: >-
+        Invoke-Sqlcmd -InputFile $(System.DefaultWorkingDirectory)/src/tSQLt/PrepareServer.sql -ServerInstance "localhost" -Database "StackOverflow" -Username "sa"  -Password "Password123"  -ConnectionTimeout 120 -TrustServerCertificate
+
+
+        Invoke-Sqlcmd -InputFile $(System.DefaultWorkingDirectory)/src/tSQLt/tSQLt.class.sql -ServerInstance "localhost" -Database "StackOverflow" -Username "sa"  -Password "Password123"  -ConnectionTimeout 120 -TrustServerCertificate
+      pwsh: true
+  - task: CmdLine@2
+    displayName: Baseline Flyway
+    inputs:
+      script: >
+        /usr/local/bin/flyway -n -color=always -locations=filesystem:$(System.DefaultWorkingDirectory)/src/CI/Flyway -url="jdbc:sqlserver://localhost:1433;databaseName=StackOverflow;encrypt=true;trustServerCertificate=true" -user=sa -password=Password123 -baselineVersion=0 baseline
+      workingDirectory: src/CI/Flyway
+  - task: CmdLine@2
+    displayName: Deploy Schema and Tests
+    inputs:
+      script: >
+        /usr/local/bin/flyway -n -color=always -locations=filesystem:$(System.DefaultWorkingDirectory)/src/CI/Flyway -url="jdbc:sqlserver://localhost:1433;databaseName=StackOverflow;encrypt=true;trustServerCertificate=true" -user=sa -password=Password123 migrate
+      workingDirectory: src/CI/Flyway
+  - task: PowerShell@2
+    displayName: Run Unit Tests
+    continueOnError: True
+    inputs:
+      targetType: inline
+      script: >
+        Invoke-Sqlcmd -ServerInstance "localhost" -Database "StackOverflow" -Username "sa"  -Password "Password123"  -Query "EXEC tSQLt.RunAll" -ConnectionTimeout 120 -TrustServerCertificate
+      pwsh: true
+  - task: PowerShell@2
+    displayName: Get Unit Test Results
+    inputs:
+      targetType: inline
+      script: >
+        $results = Invoke-Sqlcmd -ServerInstance "localhost" -Database "StackOverflow" -Username "sa"  -Password "Password123"  -Query "EXEC tSQLt.XmlResultFormatter" -ConnectionTimeout 120 -TrustServerCertificate
+
+        Write-Host "Test results:"
+
+        Write-Host "$results[0]"
+
+        $results[0] > $(System.DefaultWorkingDirectory)\tSQLt_testResults.xml
+  - task: PublishTestResults@2
+    displayName: Publish Test Results
+    inputs:
+      testResultsFiles: tSQLt_testResults.xml
+      failTaskOnFailedTests: true
+  - task: CmdLine@2
+    displayName: Stop and Cleanup Docker Container
+    condition: always()
+    inputs:
+      script: >
+        docker stop sqlserver
+
+        docker rm sqlserver
+...
